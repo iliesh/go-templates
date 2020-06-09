@@ -1,4 +1,4 @@
-module github.soltanici.eu/may_30/logger-m2
+module github.com/iliesh/go-templates/logger
 
 go 1.13
 
