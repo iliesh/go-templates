@@ -1,4 +1,4 @@
-package main
+package logger
 
 import (
 	"crypto/rand"
@@ -9,6 +9,11 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
+)
+
+const (
+	programName = "template"
+	version     = "1.0.0"
 )
 
 var (
