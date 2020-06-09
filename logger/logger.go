@@ -162,7 +162,8 @@ func logPrint(logFormat *logrus.Logger, level, msg string) {
 	}
 }
 
-func logger(level, msg string) {
+// Logger function
+func Logger(level, msg string) {
 
 	if requestID == "" {
 		requestID = logRequestID()
