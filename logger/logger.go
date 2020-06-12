@@ -1,37 +1,35 @@
 package logger
 
+// Package Version 1.0.1
+
 import (
-	"crypto/rand"
 	"fmt"
 	"os"
 	"path"
 	"runtime"
-	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	programName = "template"
-	version     = "1.0.0"
-)
-
 var (
-	codeFile, codeFunc, requestID string
-	line                          int
-	noLogFile                     bool
+	// ProgramName Variable
+	ProgramName string
+	// Version Variable
+	Version string = "0.0.0"
+	// NoLogFile Variable
+	NoLogFile          bool
+	codeFile, codeFunc string
+	line               int
+	requestID          int64
 )
 
-// Func logRequestID is used to generate a uniq id in order to find the necessary log based on this
-func logRequestID() (id string) {
-
-	b := make([]byte, 8)
-	_, err := rand.Read(b)
-	if err != nil {
-		fmt.Printf("Logger: Unable to generate a request id: %v\n", err)
-		return "00000000"
+func init() {
+	// Generate RequestID value
+	if requestID == 0 {
+		requestID = time.Now().UnixNano()
 	}
-	return fmt.Sprintf("%x", b)
+	ProgramName = path.Base(os.Args[0])
 }
 
 // Func runtimeInfo is used to get runtime information like file name, function and line number of executed script
@@ -52,7 +50,7 @@ func runtimeInfo(depthList ...int) (cf, fct string, l int) {
 	return path.Base(file), runtime.FuncForPC(function).Name(), line
 }
 
-func logStdOut(level, msg string) {
+func logStdOut(level, format string, args ...interface{}) {
 	logFormat := logrus.New()
 	logFormat.SetLevel(logrus.TraceLevel)
 	logFormat.SetOutput(os.Stdout)
@@ -67,11 +65,11 @@ func logStdOut(level, msg string) {
 		PadLevelText:           false,
 	})
 
-	logPrint(logFormat, level, msg)
+	logPrint(logFormat, level, format, args...)
 
 }
 
-func logFile(level, msg string) {
+func logFile(level, format string, args ...interface{}) {
 	logFormat := logrus.New()
 	logFormat.SetLevel(logrus.TraceLevel)
 	logFormat.SetOutput(os.Stdout)
@@ -86,18 +84,18 @@ func logFile(level, msg string) {
 				DisableLevelTruncation: false,
 			})
 			logFormat.WithFields(logrus.Fields{
-				"version":   version,
+				"version":   Version,
 				"requestid": requestID,
 				"function":  codeFunc,
 				"file":      codeFile,
 				"line":      line,
-			}).Warn("Failed to create Log Folder, Error: " + fmt.Sprintf("%v", err))
-			noLogFile = true
+			}).Warnf("Failed to create Log Folder, Error: %v", err)
+			NoLogFile = true
 			return
 		}
 	}
 
-	logfile, err := os.OpenFile(logPath+"/"+programName+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	logfile, err := os.OpenFile(logPath+"/"+ProgramName+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err == nil {
 		logFormat.SetOutput(logfile)
 	} else {
@@ -108,13 +106,13 @@ func logFile(level, msg string) {
 			DisableLevelTruncation: true,
 		})
 		logFormat.WithFields(logrus.Fields{
-			"version":   version,
+			"version":   Version,
 			"requestid": requestID,
 			"function":  codeFunc,
 			"file":      codeFile,
 			"line":      line,
-		}).Warn("Failed to open log file, Error: " + fmt.Sprintf("%v", err))
-		noLogFile = true
+		}).Warnf("Failed to open log file, Error: %v", err)
+		NoLogFile = true
 		return
 	}
 	defer logfile.Close()
@@ -129,13 +127,15 @@ func logFile(level, msg string) {
 		ForceQuote:             true,
 	})
 
-	logPrint(logFormat, level, msg)
+	logPrint(logFormat, level, format, args...)
 }
 
-func logPrint(logFormat *logrus.Logger, level, msg string) {
+func logPrint(logFormat *logrus.Logger, level, format string, args ...interface{}) {
+
+	codeFile, codeFunc, line = runtimeInfo(4)
 
 	log := logFormat.WithFields(logrus.Fields{
-		"version":   version,
+		"version":   Version,
 		"file":      codeFile,
 		"requestid": requestID,
 		"function":  codeFunc,
@@ -144,36 +144,86 @@ func logPrint(logFormat *logrus.Logger, level, msg string) {
 
 	switch level {
 	case "trace":
-		log.Trace(msg)
+		log.Tracef(format, args...)
 	case "debug":
-		log.Debug(msg)
+		log.Debugf(format, args...)
 	case "info":
-		log.Info(msg)
+		log.Infof(format, args...)
 	case "warning":
-		log.Warning(msg)
+		log.Warnf(format, args...)
 	case "error":
-		log.Error(msg)
+		log.Errorf(format, args...)
 	case "fatal":
-		log.Fatal(msg)
+		log.Fatalf(format, args...)
 	case "panic":
-		log.Panic(msg)
+		log.Panicf(format, args...)
 	default:
-		log.Trace(msg)
+		log.Tracef(format, args...)
 	}
 }
 
-// Logger function
-func Logger(level, msg string) {
+// Trace logs a message at level Trace on the standard logger and to the file.
+func Trace(format string, args ...interface{}) {
+	// Logging to stdout
+	logStdOut("trace", format, args...)
 
-	if requestID == "" {
-		requestID = logRequestID()
+	if !NoLogFile {
+		// Logging to file
+		logFile("trace", format, args...)
 	}
+}
 
-	codeFile, codeFunc, line = runtimeInfo(2)
-	logStdOut(strings.ToLower(level), msg)
+// Debug logs a message at level Debug on the standard logger and to the file.
+func Debug(format string, args ...interface{}) {
+	// Logging to stdout
+	logStdOut("debug", format, args...)
 
-	if !noLogFile {
-		logFile(strings.ToLower(level), msg)
+	if !NoLogFile {
+		// Logging to file
+		logFile("debug", format, args...)
 	}
+}
 
+// Info logs a message at level Info on the standard logger and to the file.
+func Info(format string, args ...interface{}) {
+	// Logging to stdout
+	logStdOut("info", format, args...)
+
+	if !NoLogFile {
+		// Logging to file
+		logFile("info", format, args...)
+	}
+}
+
+// Warn logs a message at level Warn on the standard logger and to the file.
+func Warn(format string, args ...interface{}) {
+	// Logging to stdout
+	logStdOut("warning", format, args...)
+
+	if !NoLogFile {
+		// Logging to file
+		logFile("warning", format, args...)
+	}
+}
+
+// Error logs a message at level Error on the standard logger and to the file.
+func Error(format string, args ...interface{}) {
+	// Logging to stdout
+	logStdOut("error", format, args...)
+
+	if !NoLogFile {
+		// Logging to file
+		logFile("error", format, args...)
+	}
+}
+
+// Panic logs a message at level Panic on the standard logger and to the file.
+func Panic(format string, args ...interface{}) {
+	// Logging to stdout
+	logStdOut("panic", format, args...)
+
+	if !NoLogFile {
+		// Logging to file
+		logFile("panic", format, args...)
+	}
 }
