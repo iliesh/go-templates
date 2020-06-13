@@ -3,7 +3,10 @@ Personal Code Templates
 
 #### LOGGER
 To import the logger package use:
+
+```golang
 go get github.com/iliesh/go-templates/logger/
+```
 
 -- Examples:
 log.Info("Info Simple Text of Type/Value: %T/%v", var1, var)
