@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -15,10 +16,13 @@ import (
 var (
 	// ProgramName Variable
 	ProgramName string
-	// Version Variable
+	// Version Default Value
 	Version string = "0.0.0"
+	// LogLevel Deffault Value
+	LogLevel string = "Trace"
 	// NoLogFile Variable
-	NoLogFile          bool
+	NoLogFile bool
+
 	codeFile, codeFunc string
 	line               int
 	requestID          int64
@@ -52,8 +56,26 @@ func runtimeInfo(depthList ...int) (cf, fct string, l int) {
 
 func logStdOut(level, format string, args ...interface{}) {
 	logFormat := logrus.New()
-	logFormat.SetLevel(logrus.TraceLevel)
 	logFormat.SetOutput(os.Stdout)
+
+	switch strings.ToLower(LogLevel) {
+	case "trace":
+		logFormat.SetLevel(logrus.TraceLevel)
+	case "debug":
+		logFormat.SetLevel(logrus.DebugLevel)
+	case "info":
+		logFormat.SetLevel(logrus.InfoLevel)
+	case "warning":
+		logFormat.SetLevel(logrus.WarnLevel)
+	case "error":
+		logFormat.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logFormat.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logFormat.SetLevel(logrus.PanicLevel)
+	default:
+		logFormat.SetLevel(logrus.TraceLevel)
+	}
 
 	logFormat.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:          true,
@@ -71,8 +93,26 @@ func logStdOut(level, format string, args ...interface{}) {
 
 func logFile(level, format string, args ...interface{}) {
 	logFormat := logrus.New()
-	logFormat.SetLevel(logrus.TraceLevel)
 	logFormat.SetOutput(os.Stdout)
+
+	switch strings.ToLower(LogLevel) {
+	case "trace":
+		logFormat.SetLevel(logrus.TraceLevel)
+	case "debug":
+		logFormat.SetLevel(logrus.DebugLevel)
+	case "info":
+		logFormat.SetLevel(logrus.InfoLevel)
+	case "warning":
+		logFormat.SetLevel(logrus.WarnLevel)
+	case "error":
+		logFormat.SetLevel(logrus.ErrorLevel)
+	case "fatal":
+		logFormat.SetLevel(logrus.FatalLevel)
+	case "panic":
+		logFormat.SetLevel(logrus.PanicLevel)
+	default:
+		logFormat.SetLevel(logrus.TraceLevel)
+	}
 
 	logPath := "/var/log/scripts"
 
