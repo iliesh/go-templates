@@ -13,6 +13,11 @@ go get github.com/iliesh/go-templates/logger/
 log.Info("Info Simple Text of Type/Value: %T/%v", var1, var)
 ```
 
+-- By default LogLevel is set to Trace, can be changed from main func with:
+```golang
+log.LogLevel = "info"
+```
+
 Valid Levels: Trace/Debug/Info/Warning/Error/Fatal/Panic
 
 -- To Disable File Logging, set NoLogFile variable to true 
