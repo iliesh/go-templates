@@ -1,7 +1,7 @@
-go-templates
+### go-templates
 Personal Code Templates
 
-LOGGER
+#### LOGGER
 To import the logger package use:
 go get github.com/iliesh/go-templates/logger/
 
