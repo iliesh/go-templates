@@ -14,14 +14,18 @@ import (
 )
 
 var (
-	// ProgramName Variable
+	// ProgramName variable
 	ProgramName string
-	// Version Default Value
+	// Version default value
 	Version string = "0.0.0"
-	// LogLevel Deffault Value
+	// LogLevel default value
 	LogLevel string = "Trace"
-	// NoLogFile Variable
-	NoLogFile bool
+	// NoLogFile variable
+	NoLogFile bool = true
+	// LogFilePath default variable
+	LogFilePath string = "/var/log/scripts"
+	// LogFileName default variable
+	LogFileName string = ProgramName
 
 	codeFile, codeFunc string
 	line               int
@@ -114,7 +118,7 @@ func logFile(level, format string, args ...interface{}) {
 		logFormat.SetLevel(logrus.TraceLevel)
 	}
 
-	logPath := "/var/log/scripts"
+	logPath := LogFilePath
 
 	if _, err := os.Stat(logPath); os.IsNotExist(err) {
 		if err := os.Mkdir(logPath, 0666); err != nil {
@@ -135,7 +139,7 @@ func logFile(level, format string, args ...interface{}) {
 		}
 	}
 
-	logfile, err := os.OpenFile(logPath+"/"+ProgramName+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	logfile, err := os.OpenFile(logPath+"/"+LogFileName+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err == nil {
 		logFormat.SetOutput(logfile)
 	} else {
@@ -254,6 +258,17 @@ func Error(format string, args ...interface{}) {
 	if !NoLogFile {
 		// Logging to file
 		logFile("error", format, args...)
+	}
+}
+
+// Fatal logs a message at level Error on the standard logger and to the file.
+func Fatal(format string, args ...interface{}) {
+	// Logging to stdout
+	logStdOut("fatal", format, args...)
+
+	if !NoLogFile {
+		// Logging to file
+		logFile("fatal", format, args...)
 	}
 }
 
