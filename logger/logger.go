@@ -1,6 +1,6 @@
 package logger
 
-// Package Version 1.0.1
+// Package Version 1.0.2
 
 import (
 	"fmt"
@@ -24,8 +24,6 @@ var (
 	NoLogFile bool = true
 	// LogFilePath default variable
 	LogFilePath string = "/var/log/scripts"
-	// LogFileName default variable
-	LogFileName string = ProgramName
 
 	codeFile, codeFunc string
 	line               int
@@ -139,7 +137,7 @@ func logFile(level, format string, args ...interface{}) {
 		}
 	}
 
-	logfile, err := os.OpenFile(logPath+"/"+LogFileName+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
+	logfile, err := os.OpenFile(logPath+"/"+ProgramName+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 	if err == nil {
 		logFormat.SetOutput(logfile)
 	} else {
