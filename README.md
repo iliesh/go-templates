@@ -35,3 +35,7 @@ logger.ProgramName="Program1"
 logger.Version="1.0.0"
 ```
 
+-- Changing RequestID variable
+```golang
+log.RequestID = time.Now().UnixNano()
+```
