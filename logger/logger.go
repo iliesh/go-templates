@@ -1,6 +1,6 @@
 package logger
 
-// Package Version 1.0.2
+// Package Version 1.0.3
 
 import (
 	"fmt"
@@ -24,16 +24,17 @@ var (
 	NoLogFile bool = true
 	// LogFilePath default variable
 	LogFilePath string = "/var/log/scripts"
+	// RequestID used for identifying requests
+	RequestID int64
 
 	codeFile, codeFunc string
 	line               int
-	requestID          int64
 )
 
 func init() {
 	// Generate RequestID value
-	if requestID == 0 {
-		requestID = time.Now().UnixNano()
+	if RequestID == 0 {
+		RequestID = time.Now().UnixNano()
 	}
 	ProgramName = path.Base(os.Args[0])
 }
@@ -127,7 +128,7 @@ func logFile(level, format string, args ...interface{}) {
 			})
 			logFormat.WithFields(logrus.Fields{
 				"version":   Version,
-				"requestid": requestID,
+				"requestid": RequestID,
 				"function":  codeFunc,
 				"file":      codeFile,
 				"line":      line,
@@ -149,7 +150,7 @@ func logFile(level, format string, args ...interface{}) {
 		})
 		logFormat.WithFields(logrus.Fields{
 			"version":   Version,
-			"requestid": requestID,
+			"requestid": RequestID,
 			"function":  codeFunc,
 			"file":      codeFile,
 			"line":      line,
@@ -179,7 +180,7 @@ func logPrint(logFormat *logrus.Logger, level, format string, args ...interface{
 	log := logFormat.WithFields(logrus.Fields{
 		"version":   Version,
 		"file":      codeFile,
-		"requestid": requestID,
+		"requestid": RequestID,
 		"function":  codeFunc,
 		"line":      line,
 	})
