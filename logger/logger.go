@@ -142,7 +142,6 @@ func logFile(level, format string, args ...interface{}) {
 	if err == nil {
 		logFormat.SetOutput(logfile)
 	} else {
-		codeFile, codeFunc, line := runtimeInfo(1)
 		logFormat.SetFormatter(&logrus.TextFormatter{
 			FullTimestamp:          true,
 			TimestampFormat:        "2006-01-02 15:04:05",
@@ -151,9 +150,6 @@ func logFile(level, format string, args ...interface{}) {
 		logFormat.WithFields(logrus.Fields{
 			"version":   Version,
 			"requestid": RequestID,
-			"function":  codeFunc,
-			"file":      codeFile,
-			"line":      line,
 		}).Warnf("Failed to open log file, Error: %v", err)
 		NoLogFile = true
 		return
