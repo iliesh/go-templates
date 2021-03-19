@@ -18,24 +18,19 @@ log.Info("Info Simple Text of Type/Value: %T/%v", var1, var)
 log.LogLevel = "info"
 ```
 
-Valid Levels: Trace/Debug/Info/Warning/Error/Fatal/Panic
-
--- To Disable File Logging, set NoLogFile variable to true 
-```golang
-logger.NoLogFile=true
-```
+Valid Levels: Trace/Debug/Info/Warning/Error/Panic
 
 -- By default programname variable will be the name of the executable file, to change it set the ProgramName variable accordingly:
 ```golang
-logger.ProgramName="Program1"
+log.AppName="Program1"
 ```
 
 -- By default Package Version="0.0.0", to change it - set the following variable:
 ```golang
-logger.Version="1.0.0"
+log.Version="1.0.0"
 ```
 
 -- Changing RequestID variable
 ```golang
-log.RequestID = time.Now().UnixNano()
+log.ReqID = log.RandomString(8)
 ```

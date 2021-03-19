@@ -1,46 +1,114 @@
 package logger
 
-// Package Version 1.0.3
+// Version 2.0.0
 
 import (
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"path"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/sirupsen/logrus"
+	"unsafe"
 )
 
 var (
-	// ProgramName variable
-	ProgramName string
-	// Version default value
-	Version string = "0.0.0"
-	// LogLevel default value
-	LogLevel string = "Trace"
-	// NoLogFile variable
-	NoLogFile bool = true
-	// LogFilePath default variable
-	LogFilePath string = "/var/log/scripts"
-	// RequestID used for identifying requests
-	RequestID int64
+	// AppName - Name of the running application
+	AppName = ""
+	// Version - Application Version
+	Version = "0.0.0"
+	// LogLevel - Application loglevel
+	LogLevel = "trace"
+	// ReqID - Unique ID
+	ReqID = ""
+	// Color - Colorize log output
+	Color = true
+	// Env variable - Setting the running environment (prod/dev)
+	// For the prod environment - the log will be formatted automatically as a json object and colors
+	// will be disabled
+	Env = "dev"
 
-	codeFile, codeFunc string
-	line               int
+	levelColor = map[string]string{
+		"TRACE": colorWhite,
+		"DEBUG": colorGreen,
+		"INFO ": colorCyan,
+		"WARN ": colorYellow,
+		"ERROR": colorRed,
+		"PANIC": colorRedBg,
+	}
+
+	logLevelNumber = map[string]int{
+		"trace":   6,
+		"debug":   5,
+		"info":    4,
+		"warning": 3,
+		"error":   2,
+		"panic":   1,
+	}
+)
+
+type logT struct {
+	Time      string `json:"time,omitempty"`
+	Level     string `json:"level,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
+	Msg       string `json:"msg,omitempty"`
+	File      string `json:"file,omitempty"`
+	Func      string `json:"func,omitempty"`
+	Line      string `json:"line,omitempty"`
+	AppName   string `json:"app_name,omitempty"`
+	Version   string `json:"version,omitempty"`
+}
+
+const (
+	colorReset = "\033[0m"
+	// colorBlack  = "\033[30m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	// colorBlue   = "\033[34m"
+	// colorPurple = "\033[35m"
+	colorCyan  = "\033[36m"
+	colorWhite = "\033[37m"
+	colorGray  = "\033[90m"
+
+	colorRedBg = "\033[41m"
+
+	charBytes     = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
 
 func init() {
-	// Generate RequestID value
-	if RequestID == 0 {
-		RequestID = time.Now().UnixNano()
+	rand.Seed(time.Now().UnixNano())
+	ReqID = RandomString(8)
+	AppName = path.Base(os.Args[0])
+}
+
+func RandomString(n int) string {
+	src := rand.NewSource(time.Now().UnixNano())
+	b := make([]byte, n)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(charBytes) {
+			b[i] = charBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
 	}
-	ProgramName = path.Base(os.Args[0])
+
+	return *(*string)(unsafe.Pointer(&b))
 }
 
 // Func runtimeInfo is used to get runtime information like file name, function and line number of executed script
-func runtimeInfo(depthList ...int) (cf, fct string, l int) {
+func runtimeInfo(depthList ...int) (cf, fct, l string) {
 	var depth int
 	if depthList == nil {
 		depth = 1
@@ -51,229 +119,170 @@ func runtimeInfo(depthList ...int) (cf, fct string, l int) {
 
 	if !ok {
 		fmt.Printf("Logger: Unable to get runtime data\n")
-		return "?", "runtimeInfo", 0
+		return "?", "runtimeInfo", "0"
 	}
 
-	return path.Base(file), runtime.FuncForPC(function).Name(), line
+	return path.Base(file), runtime.FuncForPC(function).Name(), strconv.Itoa(line)
 }
 
-func logStdOut(level, format string, args ...interface{}) {
-	logFormat := logrus.New()
-	logFormat.SetOutput(os.Stdout)
+func Trace(format string, s ...interface{}) {
 
-	switch strings.ToLower(LogLevel) {
-	case "trace":
-		logFormat.SetLevel(logrus.TraceLevel)
-	case "debug":
-		logFormat.SetLevel(logrus.DebugLevel)
-	case "info":
-		logFormat.SetLevel(logrus.InfoLevel)
-	case "warning":
-		logFormat.SetLevel(logrus.WarnLevel)
-	case "error":
-		logFormat.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		logFormat.SetLevel(logrus.FatalLevel)
-	case "panic":
-		logFormat.SetLevel(logrus.PanicLevel)
-	default:
-		logFormat.SetLevel(logrus.TraceLevel)
-	}
-
-	logFormat.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:          true,
-		TimestampFormat:        "2006-01-02 15:04:05",
-		DisableLevelTruncation: false,
-		DisableSorting:         false,
-		DisableColors:          false,
-		ForceColors:            true,
-		PadLevelText:           false,
-	})
-
-	logPrint(logFormat, level, format, args...)
-
-}
-
-func logFile(level, format string, args ...interface{}) {
-	logFormat := logrus.New()
-	logFormat.SetOutput(os.Stdout)
-
-	switch strings.ToLower(LogLevel) {
-	case "trace":
-		logFormat.SetLevel(logrus.TraceLevel)
-	case "debug":
-		logFormat.SetLevel(logrus.DebugLevel)
-	case "info":
-		logFormat.SetLevel(logrus.InfoLevel)
-	case "warning":
-		logFormat.SetLevel(logrus.WarnLevel)
-	case "error":
-		logFormat.SetLevel(logrus.ErrorLevel)
-	case "fatal":
-		logFormat.SetLevel(logrus.FatalLevel)
-	case "panic":
-		logFormat.SetLevel(logrus.PanicLevel)
-	default:
-		logFormat.SetLevel(logrus.TraceLevel)
-	}
-
-	logPath := LogFilePath
-
-	if _, err := os.Stat(logPath); os.IsNotExist(err) {
-		if err := os.Mkdir(logPath, 0666); err != nil {
-			logFormat.SetFormatter(&logrus.TextFormatter{
-				FullTimestamp:          true,
-				TimestampFormat:        "2006-01-02 15:04:05",
-				DisableLevelTruncation: false,
-			})
-			logFormat.WithFields(logrus.Fields{
-				"version":   Version,
-				"requestid": RequestID,
-				"function":  codeFunc,
-				"file":      codeFile,
-				"line":      line,
-			}).Warnf("Failed to create Log Folder, Error: %v", err)
-			NoLogFile = true
-			return
-		}
-	}
-
-	logfile, err := os.OpenFile(logPath+"/"+ProgramName+".log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
-	if err == nil {
-		logFormat.SetOutput(logfile)
-	} else {
-		logFormat.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp:          true,
-			TimestampFormat:        "2006-01-02 15:04:05",
-			DisableLevelTruncation: true,
-		})
-		logFormat.WithFields(logrus.Fields{
-			"version":   Version,
-			"requestid": RequestID,
-		}).Warnf("Failed to open log file, Error: %v", err)
-		NoLogFile = true
+	if logLevelNumber[strings.ToLower(LogLevel)] < 6 {
 		return
 	}
-	defer logfile.Close()
 
-	logFormat.SetNoLock()
-	logFormat.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:          true,
-		TimestampFormat:        "2006-01-02 15:04:05",
-		DisableLevelTruncation: true,
-		DisableSorting:         false,
-		DisableColors:          true,
-		ForceQuote:             true,
-	})
+	output := logT{}
+	output.Level = "TRACE"
+	output.Msg = format
 
-	logPrint(logFormat, level, format, args...)
+	o, err := logFormat(output)
+	if err != nil {
+		fmt.Printf("[LOGGER] - Error Formatting the Object: %s\n", err.Error())
+		return
+	}
+
+	fmt.Printf(o, s...)
 }
 
-func logPrint(logFormat *logrus.Logger, level, format string, args ...interface{}) {
+func Debug(format string, s ...interface{}) {
 
-	codeFile, codeFunc, line = runtimeInfo(4)
-
-	log := logFormat.WithFields(logrus.Fields{
-		"version":   Version,
-		"file":      codeFile,
-		"requestid": RequestID,
-		"function":  codeFunc,
-		"line":      line,
-	})
-
-	switch level {
-	case "trace":
-		log.Tracef(format, args...)
-	case "debug":
-		log.Debugf(format, args...)
-	case "info":
-		log.Infof(format, args...)
-	case "warning":
-		log.Warnf(format, args...)
-	case "error":
-		log.Errorf(format, args...)
-	case "fatal":
-		log.Fatalf(format, args...)
-	case "panic":
-		log.Panicf(format, args...)
-	default:
-		log.Tracef(format, args...)
+	if logLevelNumber[strings.ToLower(LogLevel)] < 5 {
+		return
 	}
+
+	output := logT{}
+	output.Level = "DEBUG"
+	output.Msg = format
+
+	o, err := logFormat(output)
+	if err != nil {
+		fmt.Printf("[LOGGER] - Error Formatting the Object: %s\n", err.Error())
+		return
+	}
+
+	fmt.Printf(o, s...)
 }
 
-// Trace logs a message at level Trace on the standard logger and to the file.
-func Trace(format string, args ...interface{}) {
-	// Logging to stdout
-	logStdOut("trace", format, args...)
+func Info(format string, s ...interface{}) {
 
-	if !NoLogFile {
-		// Logging to file
-		logFile("trace", format, args...)
+	if logLevelNumber[strings.ToLower(LogLevel)] < 4 {
+		return
 	}
+
+	output := logT{}
+	output.Level = "INFO "
+	output.Msg = format
+
+	o, err := logFormat(output)
+	if err != nil {
+		fmt.Printf("[LOGGER] - Error Formatting the Object: %s\n", err.Error())
+		return
+	}
+
+	fmt.Printf(o, s...)
 }
 
-// Debug logs a message at level Debug on the standard logger and to the file.
-func Debug(format string, args ...interface{}) {
-	// Logging to stdout
-	logStdOut("debug", format, args...)
+func Warning(format string, s ...interface{}) {
 
-	if !NoLogFile {
-		// Logging to file
-		logFile("debug", format, args...)
+	if logLevelNumber[strings.ToLower(LogLevel)] < 3 {
+		return
 	}
+
+	output := logT{}
+	output.Level = "WARN "
+	output.Msg = format
+
+	o, err := logFormat(output)
+	if err != nil {
+		fmt.Printf("[LOGGER] - Error Formatting the Object: %s\n", err.Error())
+		return
+	}
+
+	fmt.Printf(o, s...)
 }
 
-// Info logs a message at level Info on the standard logger and to the file.
-func Info(format string, args ...interface{}) {
-	// Logging to stdout
-	logStdOut("info", format, args...)
+func Error(format string, s ...interface{}) {
 
-	if !NoLogFile {
-		// Logging to file
-		logFile("info", format, args...)
+	if logLevelNumber[strings.ToLower(LogLevel)] < 2 {
+		return
 	}
+
+	output := logT{}
+	output.Level = "ERROR"
+	output.Msg = format
+
+	o, err := logFormat(output)
+	if err != nil {
+		fmt.Printf("[LOGGER] - Error Formatting the Object: %s\n", err.Error())
+		return
+	}
+
+	fmt.Printf(o, s...)
 }
 
-// Warn logs a message at level Warn on the standard logger and to the file.
-func Warn(format string, args ...interface{}) {
-	// Logging to stdout
-	logStdOut("warning", format, args...)
+func Panic(format string, s ...interface{}) {
+	output := logT{}
+	output.Level = "PANIC"
+	output.Msg = format
 
-	if !NoLogFile {
-		// Logging to file
-		logFile("warning", format, args...)
+	o, err := logFormat(output)
+	if err != nil {
+		fmt.Printf("[LOGGER] - Error Formatting the Object: %s\n", err.Error())
+		return
 	}
+
+	fmt.Printf(o, s...)
+
+	// Print Stack Trace
+	buf := make([]byte, 1<<16)
+	runtime.Stack(buf, true)
+	fmt.Printf("%s", buf)
+	os.Exit(1)
 }
 
-// Error logs a message at level Error on the standard logger and to the file.
-func Error(format string, args ...interface{}) {
-	// Logging to stdout
-	logStdOut("error", format, args...)
+func logFormat(logData logT) (string, error) {
+	codeFile, codeFunc, line := runtimeInfo(3)
+	currentTime := time.Now()
+	timeFmt := currentTime.Format("2006.01.02 15:04:05")
 
-	if !NoLogFile {
-		// Logging to file
-		logFile("error", format, args...)
+	if Env == "prod" {
+		logData.Time = timeFmt
+		logData.RequestID = ReqID
+		logData.File = codeFile
+		logData.Func = codeFunc
+		logData.Line = line
+		logData.AppName = AppName
+		logData.Version = Version
+		out, err := json.Marshal(logData)
+		if err != nil {
+			fmt.Printf("[LOGGER] - Unable to Encode to JSON\n")
+			return "", err
+		}
+		return string(out), nil
 	}
-}
 
-// Fatal logs a message at level Error on the standard logger and to the file.
-func Fatal(format string, args ...interface{}) {
-	// Logging to stdout
-	logStdOut("fatal", format, args...)
-
-	if !NoLogFile {
-		// Logging to file
-		logFile("fatal", format, args...)
+	if Color {
+		logData.Time = levelColor[logData.Level] + "[" + timeFmt + "] " + colorReset
+		logData.RequestID = "[" + ReqID + "]  "
+		logData.Msg = levelColor[logData.Level] + logData.Msg + colorReset + "    "
+		logData.File = colorGray + codeFile + "," + colorReset
+		logData.Func = colorGray + codeFunc + "," + colorReset
+		logData.Line = colorGray + "(" + line + ")" + "," + colorReset
+		logData.AppName = colorGray + "appname:" + AppName + "," + colorReset
+		logData.Version = colorGray + "version:" + Version + colorReset
+		logData.Level = levelColor[logData.Level] + "[" + logData.Level + "] " + colorReset
+	} else {
+		logData.Time = "[" + timeFmt + "] "
+		logData.RequestID = "[" + ReqID + "]  "
+		logData.Msg = logData.Msg + "    "
+		logData.File = codeFile + ","
+		logData.Func = codeFunc + ","
+		logData.Line = "(" + line + ")" + ","
+		logData.AppName = "appname: " + AppName + ","
+		logData.Version = "version:" + Version
+		logData.Level = "[" + logData.Level + "] "
 	}
-}
+	out := logData.Time + logData.Level + logData.RequestID + logData.Msg + logData.File + logData.Func + logData.Line + logData.AppName + logData.Version + "\n"
 
-// Panic logs a message at level Panic on the standard logger and to the file.
-func Panic(format string, args ...interface{}) {
-	// Logging to stdout
-	logStdOut("panic", format, args...)
-
-	if !NoLogFile {
-		// Logging to file
-		logFile("panic", format, args...)
-	}
+	return out, nil
 }
