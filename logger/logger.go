@@ -1,6 +1,6 @@
 package logger
 
-// Version 2.0.0
+// Version 2.0.1
 
 import (
 	"encoding/json"
@@ -258,7 +258,7 @@ func logFormat(logData logT) (string, error) {
 			fmt.Printf("[LOGGER] - Unable to Encode to JSON\n")
 			return "", err
 		}
-		return string(out), nil
+		return string(out) + "\n", nil
 	}
 
 	if Color {
