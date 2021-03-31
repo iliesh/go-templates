@@ -1,6 +1,6 @@
 package logger
 
-// Version 2.0.1
+// Version 2.0.2
 
 import (
 	"encoding/json"
@@ -247,7 +247,9 @@ func logFormat(logData logT) (string, error) {
 
 	if Env == "prod" {
 		logData.Time = timeFmt
-		logData.RequestID = ReqID
+		if logData.RequestID == "" {
+			logData.RequestID = ReqID
+		}
 		logData.File = codeFile
 		logData.Func = codeFunc
 		logData.Line = line
@@ -261,9 +263,12 @@ func logFormat(logData logT) (string, error) {
 		return string(out) + "\n", nil
 	}
 
+	if logData.RequestID == "" {
+		logData.RequestID = "[" + ReqID + "]  "
+	}
+
 	if Color {
 		logData.Time = levelColor[logData.Level] + "[" + timeFmt + "] " + colorReset
-		logData.RequestID = "[" + ReqID + "]  "
 		logData.Msg = levelColor[logData.Level] + logData.Msg + colorReset + "    "
 		logData.File = colorGray + codeFile + "," + colorReset
 		logData.Func = colorGray + codeFunc + "," + colorReset
@@ -273,7 +278,6 @@ func logFormat(logData logT) (string, error) {
 		logData.Level = levelColor[logData.Level] + "[" + logData.Level + "] " + colorReset
 	} else {
 		logData.Time = "[" + timeFmt + "] "
-		logData.RequestID = "[" + ReqID + "]  "
 		logData.Msg = logData.Msg + "    "
 		logData.File = codeFile + ","
 		logData.Func = codeFunc + ","
