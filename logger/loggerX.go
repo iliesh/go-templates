@@ -35,7 +35,13 @@ func DebugX(id, format string, s ...interface{}) {
 
 	output := logT{}
 	output.Level = "DEBUG"
-	output.RequestID = id
+
+	if Env == "prod" {
+		output.RequestID = id
+	} else {
+		output.RequestID = "[" + id + "]  "
+	}
+
 	output.Msg = format
 
 	o, err := logFormat(output)
