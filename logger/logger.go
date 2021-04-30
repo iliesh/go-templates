@@ -1,6 +1,6 @@
 package logger
 
-// Version 2.0.2
+// Version 2.0.3
 
 import (
 	"encoding/json"
@@ -217,7 +217,7 @@ func Error(format string, s ...interface{}) {
 		return
 	}
 
-	fmt.Printf(o, s...)
+	fmt.Fprintf(os.Stderr, o, s...)
 }
 
 func Panic(format string, s ...interface{}) {
@@ -231,7 +231,7 @@ func Panic(format string, s ...interface{}) {
 		return
 	}
 
-	fmt.Printf(o, s...)
+	fmt.Fprintf(os.Stderr, o, s...)
 
 	// Print Stack Trace
 	buf := make([]byte, 1<<16)
