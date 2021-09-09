@@ -15,7 +15,11 @@ func TraceX(id, format string, s ...interface{}) {
 
 	output := logT{}
 	output.Level = "TRACE"
-	output.RequestID = id
+	if Env == "prod" {
+		output.RequestID = id
+	} else {
+		output.RequestID = "[" + id + "]  "
+	}
 	output.Msg = format
 
 	o, err := logFormat(output)
@@ -61,7 +65,11 @@ func InfoX(id, format string, s ...interface{}) {
 
 	output := logT{}
 	output.Level = "INFO "
-	output.RequestID = id
+	if Env == "prod" {
+		output.RequestID = id
+	} else {
+		output.RequestID = "[" + id + "]  "
+	}
 	output.Msg = format
 
 	o, err := logFormat(output)
@@ -81,7 +89,11 @@ func WarningX(id, format string, s ...interface{}) {
 
 	output := logT{}
 	output.Level = "WARN "
-	output.RequestID = id
+	if Env == "prod" {
+		output.RequestID = id
+	} else {
+		output.RequestID = "[" + id + "]  "
+	}
 	output.Msg = format
 
 	o, err := logFormat(output)
@@ -101,7 +113,11 @@ func ErrorX(id, format string, s ...interface{}) {
 
 	output := logT{}
 	output.Level = "ERROR"
-	output.RequestID = id
+	if Env == "prod" {
+		output.RequestID = id
+	} else {
+		output.RequestID = "[" + id + "]  "
+	}
 	output.Msg = format
 
 	o, err := logFormat(output)
@@ -116,7 +132,11 @@ func ErrorX(id, format string, s ...interface{}) {
 func PanicX(id, format string, s ...interface{}) {
 	output := logT{}
 	output.Level = "PANIC"
-	output.RequestID = id
+	if Env == "prod" {
+		output.RequestID = id
+	} else {
+		output.RequestID = "[" + id + "]  "
+	}
 	output.Msg = format
 
 	o, err := logFormat(output)
