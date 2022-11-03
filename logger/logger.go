@@ -243,7 +243,7 @@ func Panic(format string, s ...interface{}) {
 func logFormat(logData logT) (string, error) {
 	codeFile, codeFunc, line := runtimeInfo(3)
 	currentTime := time.Now()
-	timeFmt := currentTime.Format("2006.01.02 15:04:05.000000")
+	timeFmt := currentTime.Format(time.RFC3339)
 
 	if Env == "prod" {
 		logData.Time = timeFmt
